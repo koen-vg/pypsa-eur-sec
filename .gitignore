@@ -27,6 +27,9 @@ gurobi.log
 /data/retro/tabula-calculator-calcsetbuilding.csv
 /data/nuts*
 
+# Add exception for 2021 eurostat data until added to Zenodo
+!/data/eurostat-energy_balances-june_2021_edition
+
 *.org
 
 *.nc
