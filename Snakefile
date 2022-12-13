@@ -55,7 +55,8 @@ datafiles = [
     "data/emobility/KFZ__count",
     "data/emobility/Pkw__count",
     "data/h2_salt_caverns_GWh_per_sqkm.geojson",
-    directory("data/eurostat-energy_balances-june_2021_edition"),
+    # directory("data/eurostat-energy_balances-june_2021_edition"),  # Hasn't been added to databundle yet, must be downloaded manually.
+    directory("data/eurostat-energy_balances-may_2018_edition"),
     directory("data/jrc-idees-2015"),
 ]
 
@@ -242,7 +243,7 @@ rule build_energy_totals:
         swiss="data/switzerland-sfoe/switzerland-new_format.csv",
         idees="data/jrc-idees-2015",
         district_heat_share='data/district_heat_share.csv',
-        eurostat=directory("data/eurostat-energy_balances-june_2021_edition"),
+        eurostat="data/eurostat-energy_balances-june_2021_edition",
     output:
         energy_name='resources/energy_totals.csv',
 	    co2_name='resources/co2_totals.csv',
