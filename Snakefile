@@ -37,6 +37,10 @@ with open(f"{pypsa_eur_path}/config.default.yaml", "r") as f:
     pypsa_eur_config = yaml.safe_load(f)
 snakemake.utils.update_config(pypsa_eur_config, custom_pypsa_eur_config)
 
+# Make sure to set the run name for the pypsa-eur module correctly
+pypsa_eur_config["run"]["name"] = config["run"]
+
+# Define the pypsa-eur snakemake module and include all rules
 module pypsaeur:
     snakefile: f"{pypsa_eur_path}/Snakefile"
     prefix: pypsa_eur_path
@@ -83,8 +87,8 @@ if config.get('retrieve_sector_databundle', True):
 
 rule build_population_layouts:
     input:
-        cutout=f"{pypsa_eur_path}/cutouts/" + config['atlite']['cutout'] + ".nc",
-        nuts3_shapes=f'{pypsa_eur_path}/resources/nuts3_shapes.geojson',
+        cutout=f"{pypsa_eur_path}/cutouts/" + pypsaeur.CDIR + config['atlite']['cutout'] + ".nc",
+        nuts3_shapes=f'{pypsa_eur_path}/resources/{pypsaeur.RDIR}nuts3_shapes.geojson',
         urban_percent="data/urban_percent.csv"
     output:
         pop_layout_total="resources/pop_layout_total{weather_year}.nc",
@@ -98,11 +102,11 @@ rule build_population_layouts:
 
 rule build_clustered_population_layouts:
     input:
-        cutout=f"{pypsa_eur_path}/cutouts/" + config['atlite']['cutout'] + ".nc",
+        cutout=f"{pypsa_eur_path}/cutouts/" + pypsaeur.CDIR + config['atlite']['cutout'] + ".nc",
         pop_layout_total="resources/pop_layout_total{weather_year}.nc",
         pop_layout_urban="resources/pop_layout_urban{weather_year}.nc",
         pop_layout_rural="resources/pop_layout_rural{weather_year}.nc",
-        regions_onshore=pypsa_eur_path + '/resources/regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson'
+        regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + 'regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson'
     output:
         clustered_pop_layout="resources/pop_layout_elec{weather_year}_s{simpl}_{clusters}.csv"
     resources: mem_mb=10000
@@ -112,11 +116,11 @@ rule build_clustered_population_layouts:
 
 rule build_simplified_population_layouts:
     input:
-        cutout=f"{pypsa_eur_path}/cutouts/" + config['atlite']['cutout'] + ".nc",
+        cutout=f"{pypsa_eur_path}/cutouts/" + pypsaeur.CDIR + config['atlite']['cutout'] + ".nc",
         pop_layout_total="resources/pop_layout_total{weather_year}.nc",
         pop_layout_urban="resources/pop_layout_urban{weather_year}.nc",
         pop_layout_rural="resources/pop_layout_rural{weather_year}.nc",
-        regions_onshore=pypsa_eur_path + '/resources/regions_onshore_elec{weather_year}_s{simpl}.geojson'
+        regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + 'regions_onshore_elec{weather_year}_s{simpl}.geojson'
     output:
         clustered_pop_layout="resources/pop_layout_elec{weather_year}_s{simpl}.csv"
     resources: mem_mb=10000
@@ -154,8 +158,8 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
             entry="data/gas_network/scigrid-gas/data/IGGIELGN_BorderPoints.geojson",
             production="data/gas_network/scigrid-gas/data/IGGIELGN_Productions.geojson",
             planned_lng="data/gas_network/planned_LNGs.csv",
-            regions_onshore=pypsa_eur_path + "/resources/regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
-            regions_offshore=pypsa_eur_path + '/resources/regions_offshore{weather_year}_elec_s{simpl}_{clusters}.geojson'
+            regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
+            regions_offshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + 'regions_offshore{weather_year}_elec_s{simpl}_{clusters}.geojson'
         output:
             gas_input_nodes="resources/gas_input_locations_s{simpl}_{clusters}.geojson",
             gas_input_nodes_simplified="resources/gas_input_locations_s{simpl}_{clusters}_simplified.csv"
@@ -166,8 +170,8 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
     rule cluster_gas_network:
         input:
             cleaned_gas_network="resources/gas_network.csv",
-            regions_onshore=pypsa_eur_path + "/resources/regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
-            regions_offshore=pypsa_eur_path + "/resources/regions_offshore_elec{weather_year}_s{simpl}_{clusters}.geojson"
+            regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
+            regions_offshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_offshore_elec{weather_year}_s{simpl}_{clusters}.geojson"
         output:
             clustered_gas_network="resources/gas_network_elec_s{simpl}_{clusters}.csv"
         resources: mem_mb=4000
@@ -181,11 +185,11 @@ else:
 
 rule build_heat_demands:
     input:
-        cutout=f"{pypsa_eur_path}/cutouts/" + config['atlite']['cutout'] + ".nc",
+        cutout=f"{pypsa_eur_path}/cutouts/" + pypsaeur.CDIR + config['atlite']['cutout'] + ".nc",
         pop_layout_total="resources/pop_layout_total{weather_year}.nc",
         pop_layout_urban="resources/pop_layout_urban{weather_year}.nc",
         pop_layout_rural="resources/pop_layout_rural{weather_year}.nc",
-        regions_onshore=pypsa_eur_path + "/resources/regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson"
+        regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson"
     output:
         heat_demand_urban="resources/heat_demand_urban_elec{weather_year}_s{simpl}_{clusters}.nc",
         heat_demand_rural="resources/heat_demand_rural_elec{weather_year}_s{simpl}_{clusters}.nc",
@@ -197,11 +201,11 @@ rule build_heat_demands:
 
 rule build_temperature_profiles:
     input:
-        cutout=f"{pypsa_eur_path}/cutouts/" + config['atlite']['cutout'] + ".nc",
+        cutout=f"{pypsa_eur_path}/cutouts/" + pypsaeur.CDIR + config['atlite']['cutout'] + ".nc",
         pop_layout_total="resources/pop_layout_total{weather_year}.nc",
         pop_layout_urban="resources/pop_layout_urban{weather_year}.nc",
         pop_layout_rural="resources/pop_layout_rural{weather_year}.nc",
-        regions_onshore=pypsa_eur_path + "/resources/regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson"
+        regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson"
     output:
         temp_soil_total="resources/temp_soil_total_elec{weather_year}_s{simpl}_{clusters}.nc",
         temp_soil_rural="resources/temp_soil_rural_elec{weather_year}_s{simpl}_{clusters}.nc",
@@ -236,11 +240,11 @@ rule build_cop_profiles:
 
 rule build_solar_thermal_profiles:
     input:
-        cutout=f"{pypsa_eur_path}/cutouts/" + config['atlite']['cutout'] + ".nc",
+        cutout=f"{pypsa_eur_path}/cutouts/" + pypsaeur.CDIR + config['atlite']['cutout'] + ".nc",
         pop_layout_total="resources/pop_layout_total{weather_year}.nc",
         pop_layout_urban="resources/pop_layout_urban{weather_year}.nc",
         pop_layout_rural="resources/pop_layout_rural{weather_year}.nc",
-        regions_onshore=pypsa_eur_path + "/resources/regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson"
+        regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson"
     output:
         solar_thermal_total="resources/solar_thermal_total_elec{weather_year}_s{simpl}_{clusters}.nc",
         solar_thermal_urban="resources/solar_thermal_urban_elec{weather_year}_s{simpl}_{clusters}.nc",
@@ -252,7 +256,7 @@ rule build_solar_thermal_profiles:
 
 rule build_energy_totals:
     input:
-        nuts3_shapes=f'{pypsa_eur_path}/resources/nuts3_shapes.geojson',
+        nuts3_shapes=f'{pypsa_eur_path}/resources/{pypsaeur.RDIR}nuts3_shapes.geojson',
         co2="data/eea/UNFCCC_v23.csv",
         swiss="data/switzerland-sfoe/switzerland-new_format.csv",
         idees="data/jrc-idees-2015",
@@ -284,11 +288,11 @@ rule build_biomass_potentials:
     input:
         enspreso_biomass=HTTP.remote("https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/ENSPRESO/ENSPRESO_BIOMASS.xlsx", keep_local=True),
         nuts2="data/nuts/NUTS_RG_10M_2013_4326_LEVL_2.geojson", # https://gisco-services.ec.europa.eu/distribution/v2/nuts/download/#nuts21
-        regions_onshore=pypsa_eur_path + "/resources/regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
+        regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
         nuts3_population=f"{pypsa_eur_path}/data/bundle/nama_10r_3popgdp.tsv.gz",
         swiss_cantons=f"{pypsa_eur_path}/data/bundle/ch_cantons.csv",
         swiss_population=f"{pypsa_eur_path}/data/bundle/je-e-21.03.02.xls",
-        country_shapes=f'{pypsa_eur_path}/resources/country_shapes.geojson'
+        country_shapes=f'{pypsa_eur_path}/resources/{pypsaeur.RDIR}country_shapes.geojson'
     output:
         biomass_potentials_all='resources/biomass_potentials_all{weather_year}_s{simpl}_{clusters}.csv',
         biomass_potentials='resources/biomass_potentials{weather_year}_s{simpl}_{clusters}.csv'
@@ -316,8 +320,8 @@ else:
 rule build_salt_cavern_potentials:
     input:
         salt_caverns="data/h2_salt_caverns_GWh_per_sqkm.geojson",
-        regions_onshore=pypsa_eur_path + "/resources/regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
-        regions_offshore=pypsa_eur_path + "/resources/regions_offshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
+        regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
+        regions_offshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_offshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
     output:
         h2_cavern_potential="resources/salt_cavern_potentials{weather_year}_s{simpl}_{clusters}.csv"
     threads: 1
@@ -375,7 +379,7 @@ rule build_industrial_production_per_country_tomorrow:
 
 rule build_industrial_distribution_key:
     input:
-        regions_onshore=pypsa_eur_path + '/resources/regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson',
+        regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + 'regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson',
         clustered_pop_layout="resources/pop_layout_elec{weather_year}_s{simpl}_{clusters}.csv",
         hotmaps_industrial_database="data/Industrial_Database.csv",
     output:
@@ -491,7 +495,7 @@ rule build_transport_demand:
 rule prepare_sector_network:
     input:
         overrides="data/override_component_attrs",
-        network=pypsa_eur_path + '/networks/elec{weather_year}_s{simpl}_{clusters}_ec_lv{lv}_{opts}.nc',
+        network=f"{pypsa_eur_path}/networks/{pypsaeur.RDIR}" + 'elec{weather_year}_s{simpl}_{clusters}_ec_lv{lv}_{opts}.nc',
         pop_weighted_energy_totals="resources/pop_weighted_energy_totals{weather_year}_s{simpl}_{clusters}.csv",
         pop_weighted_heat_totals="resources/pop_weighted_heat_totals{weather_year}_s{simpl}_{clusters}.csv",
         transport_demand="resources/transport_demand{weather_year}_s{simpl}_{clusters}.csv",
@@ -502,11 +506,11 @@ rule prepare_sector_network:
         biomass_potentials='resources/biomass_potentials{weather_year}_s{simpl}_{clusters}.csv',
         heat_profile="data/heat_load_profile_BDEW.csv",
         costs=CDIR + "costs_{planning_horizons}.csv",
-        profile_offwind_ac=pypsa_eur_path +"/resources/profile{weather_year}_offwind-ac.nc",
-        profile_offwind_dc=pypsa_eur_path + "/resources/profile{weather_year}_offwind-dc.nc",
+        profile_offwind_ac=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "profile{weather_year}_offwind-ac.nc",
+        profile_offwind_dc=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "profile{weather_year}_offwind-dc.nc",
         h2_cavern="resources/salt_cavern_potentials{weather_year}_s{simpl}_{clusters}.csv",
-        busmap_s=pypsa_eur_path + "/resources/busmap_elec{weather_year}_s{simpl}.csv",
-        busmap=pypsa_eur_path + "/resources/busmap_elec{weather_year}_s{simpl}_{clusters}.csv",
+        busmap_s=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "busmap_elec{weather_year}_s{simpl}.csv",
+        busmap=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "busmap_elec{weather_year}_s{simpl}_{clusters}.csv",
         clustered_pop_layout="resources/pop_layout_elec{weather_year}_s{simpl}_{clusters}.csv",
         simplified_pop_layout="resources/pop_layout_elec{weather_year}_s{simpl}.csv",
         industrial_demand="resources/industrial_energy_demand_elec{weather_year}_s{simpl}_{clusters}_{planning_horizons}.csv",
@@ -634,9 +638,9 @@ if config["foresight"] == "myopic":
         input:
             overrides="data/override_component_attrs",
             network=RDIR + '/prenetworks/elec{weather_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}.nc',
-            powerplants=f'{pypsa_eur_path}/resources/powerplants.csv',
-            busmap_s=pypsa_eur_path + "/resources/busmap_elec{weather_year}_s{simpl}.csv",
-            busmap=pypsa_eur_path + "/resources/busmap_elec{weather_year}_s{simpl}_{clusters}.csv",
+            powerplants=f'{pypsa_eur_path}/resources/{pypsaeur.RDIR}powerplants.csv',
+            busmap_s=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "busmap_elec{weather_year}_s{simpl}.csv",
+            busmap=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "busmap_elec{weather_year}_s{simpl}_{clusters}.csv",
             clustered_pop_layout="resources/pop_layout_elec{weather_year}_s{simpl}_{clusters}.csv",
             costs=CDIR + "costs_{}.csv".format(config['scenario']['planning_horizons'][0]),
             cop_soil_total="resources/cop_soil_total_elec{weather_year}_s{simpl}_{clusters}.nc",
