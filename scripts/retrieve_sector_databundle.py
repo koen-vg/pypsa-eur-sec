@@ -19,8 +19,10 @@ if __name__ == "__main__":
 
     url = "https://zenodo.org/record/6412255/files/pypsa-eur-sec-data-bundle.tar.gz"
 
-    tarball_fn = Path("sector-bundle.tar.gz")
-    to_fn = Path("data")
+    # Should be [.../]pypsa-eur-sec/data:
+    to_fn = Path(snakemake.output[0]).parent.parent
+
+    tarball_fn = to_fn.joinpath("sector-bundle.tar.gz")
 
     logger.info(f"Downloading databundle from '{url}'.")
     progress_retrieve(url, tarball_fn)
