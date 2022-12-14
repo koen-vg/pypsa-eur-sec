@@ -11,9 +11,6 @@ import sys
 import tarfile
 from pathlib import Path
 
-# Add pypsa-eur scripts to path for import of _helpers
-sys.path.insert(0, os.getcwd() + "/../pypsa-eur/scripts")
-
 from _helpers import progress_retrieve, configure_logging
 
 

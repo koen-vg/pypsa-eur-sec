@@ -85,6 +85,7 @@ if config.get('retrieve_sector_databundle', True):
     rule retrieve_sector_databundle:
         output: *datafiles
         log: "logs/retrieve_sector_databundle.log"
+        conda: "envs/environment.yaml"
         script: 'scripts/retrieve_sector_databundle.py'
 
 
