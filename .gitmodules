@@ -1,0 +1,3 @@
+[submodule "technology-data"]
+	path = technology-data
+	url = git@github.com:pypsa/technology-data.git
