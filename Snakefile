@@ -7,8 +7,9 @@ from shutil import copyfile
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 HTTP = HTTPRemoteProvider()
 
-if not exists("config.yaml"):
-    copyfile("config.default.yaml", "config.yaml")
+# This doesn't work if pypsa-eur-sec is run as snakemake module
+# if not exists("config.yaml"):
+#     copyfile("config.default.yaml", "config.yaml")
 
 configfile: "config.yaml"
 
@@ -28,14 +29,16 @@ RDIR = config['results_dir'] + config['run']
 CDIR = config['costs_dir']
 
 
-pypsa_eur_path = "../pypsa-eur"
+pypsa_eur_path = "pypsa-eur"
 
+# When using pypsa-eur-sec independently:
+# custom_pypsa_eur_config = config.get("pypsa_eur_config", {})
+# with open(f"{pypsa_eur_path}/config.default.yaml", "r") as f:
+#     pypsa_eur_config = yaml.safe_load(f)
+# snakemake.utils.update_config(pypsa_eur_config, custom_pypsa_eur_config)
 
-# Read the default pypsa-eur config, and update it using our custom config.
-custom_pypsa_eur_config = config.get("pypsa_eur_config", {})
-with open(f"{pypsa_eur_path}/config.default.yaml", "r") as f:
-    pypsa_eur_config = yaml.safe_load(f)
-snakemake.utils.update_config(pypsa_eur_config, custom_pypsa_eur_config)
+# When using pypsa-eur-sec as a snakemake module:
+pypsa_eur_config = config.get("pypsa_eur_config", {})
 
 # Make sure to set the run name for the pypsa-eur module correctly
 pypsa_eur_config["run"]["name"] = config["run"]
