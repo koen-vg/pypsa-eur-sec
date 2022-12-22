@@ -19,7 +19,7 @@ wildcard_constraints:
     capacity_year="[0-9]{4}|",
     lv="[a-z0-9\.]+",
     simpl="[a-zA-Z0-9]*",
-    clusters="[0-9]+m?",
+    clusters="[0-9]+m?|all|[0-9]+-[0-9]+-[0-9]+",
     opts="[-+a-zA-Z0-9]*",
     sector_opts="[-+a-zA-Z0-9\.\s]*"
 
