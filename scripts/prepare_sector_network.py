@@ -548,11 +548,9 @@ def add_dac(n, costs):
     )
 
 
-def add_co2limit(n, Nyears=1., limit=0.):
+def add_co2limit(n, countries, Nyears=1., limit=0.):
 
     logger.info(f"Adding CO2 budget limit as per unit of 1990 levels of {limit}")
-
-    countries = n.buses.country.dropna().unique()
 
     sectors = emission_sectors_from_opts(opts)
 
@@ -2453,8 +2451,10 @@ if __name__ == "__main__":
         limit = o[o.find("Co2L")+4:]
         limit = float(limit.replace("p", ".").replace("m", "-"))
         break
+
     print("Add CO2 limit from", limit_type)
-    add_co2limit(n, Nyears, limit)
+    countries = snakemake.config["pypsa_eur_config"]["countries"]
+    add_co2limit(n, countries, Nyears, limit)
 
     for o in opts:
         if not o[:10] == 'linemaxext': continue
