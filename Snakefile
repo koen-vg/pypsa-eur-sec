@@ -82,6 +82,7 @@ datafiles = [
 ]
 
 if config.get('retrieve_sector_databundle', True):
+    # Local rule
     rule retrieve_sector_databundle:
         output: *datafiles
         log: "logs/retrieve_sector_databundle.log"
@@ -98,7 +99,10 @@ rule build_population_layouts:
         pop_layout_total="resources/pop_layout_total{weather_year}.nc",
         pop_layout_urban="resources/pop_layout_urban{weather_year}.nc",
         pop_layout_rural="resources/pop_layout_rural{weather_year}.nc"
-    resources: mem_mb=20000
+    resources:
+        mem_mb=2000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_population_layouts{weather_year}"
     threads: 8
     conda: "envs/environment.yaml"
@@ -114,7 +118,10 @@ rule build_clustered_population_layouts:
         regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + 'regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson'
     output:
         clustered_pop_layout="resources/pop_layout_elec{weather_year}_s{simpl}_{clusters}.csv"
-    resources: mem_mb=10000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_clustered_population_layouts/{weather_year}_s{simpl}_{clusters}"
     conda: "envs/environment.yaml"
     script: "scripts/build_clustered_population_layouts.py"
@@ -129,7 +136,10 @@ rule build_simplified_population_layouts:
         regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + 'regions_onshore_elec{weather_year}_s{simpl}.geojson'
     output:
         clustered_pop_layout="resources/pop_layout_elec{weather_year}_s{simpl}.csv"
-    resources: mem_mb=10000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_clustered_population_layouts/{weather_year}_s{simpl}"
     conda: "envs/environment.yaml"
     script: "scripts/build_clustered_population_layouts.py"
@@ -144,7 +154,7 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
         "IGGIELGN_PipeSegments.geojson",
     ]
 
-
+    # Local rule
     rule retrieve_gas_infrastructure_data:
         output: expand("data/gas_network/scigrid-gas/data/{files}", files=datafiles)
         script: 'scripts/retrieve_gas_infrastructure_data.py'
@@ -155,7 +165,10 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
             gas_network="data/gas_network/scigrid-gas/data/IGGIELGN_PipeSegments.geojson"
         output:
             cleaned_gas_network="resources/gas_network.csv"
-        resources: mem_mb=4000
+        resources:
+            mem_mb=4000,
+            runtime=1,  # In minutes
+        group: "pypsa-eur-sec-build"
         conda: "envs/environment.yaml"
         script: "scripts/build_gas_network.py"
 
@@ -171,7 +184,10 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
         output:
             gas_input_nodes="resources/gas_input_locations_s{simpl}_{clusters}.geojson",
             gas_input_nodes_simplified="resources/gas_input_locations_s{simpl}_{clusters}_simplified.csv"
-        resources: mem_mb=2000,
+        resources:
+            mem_mb=2000,
+            runtime=1,  # In minutes
+        group: "pypsa-eur-sec-build"
         conda: "envs/environment.yaml"
         script: "scripts/build_gas_input_locations.py"
 
@@ -183,7 +199,9 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
             regions_offshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_offshore_elec{weather_year}_s{simpl}_{clusters}.geojson"
         output:
             clustered_gas_network="resources/gas_network_elec_s{simpl}_{clusters}.csv"
-        resources: mem_mb=4000
+        resources:
+            mem_mb=4000,
+            runtime=1, # In minutes
         conda: "envs/environment.yaml"
         script: "scripts/cluster_gas_network.py"
 
@@ -204,7 +222,10 @@ rule build_heat_demands:
         heat_demand_urban="resources/heat_demand_urban_elec{weather_year}_s{simpl}_{clusters}.nc",
         heat_demand_rural="resources/heat_demand_rural_elec{weather_year}_s{simpl}_{clusters}.nc",
         heat_demand_total="resources/heat_demand_total_elec{weather_year}_s{simpl}_{clusters}.nc"
-    resources: mem_mb=20000
+    resources:
+        mem_mb=5000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_heat_demands/{weather_year}_s{simpl}_{clusters}"
     conda: "envs/environment.yaml"
     script: "scripts/build_heat_demand.py"
@@ -224,7 +245,10 @@ rule build_temperature_profiles:
         temp_air_total="resources/temp_air_total_elec{weather_year}_s{simpl}_{clusters}.nc",
         temp_air_rural="resources/temp_air_rural_elec{weather_year}_s{simpl}_{clusters}.nc",
         temp_air_urban="resources/temp_air_urban_elec{weather_year}_s{simpl}_{clusters}.nc"
-    resources: mem_mb=20000
+    resources:
+        mem_mb=5000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_temperature_profiles/{weather_year}_s{simpl}_{clusters}"
     conda: "envs/environment.yaml"
     script: "scripts/build_temperature_profiles.py"
@@ -245,7 +269,10 @@ rule build_cop_profiles:
         cop_air_total="resources/cop_air_total_elec{weather_year}_s{simpl}_{clusters}.nc",
         cop_air_rural="resources/cop_air_rural_elec{weather_year}_s{simpl}_{clusters}.nc",
         cop_air_urban="resources/cop_air_urban_elec{weather_year}_s{simpl}_{clusters}.nc"
-    resources: mem_mb=20000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_cop_profiles/{weather_year}_s{simpl}_{clusters}"
     conda: "envs/environment.yaml"
     script: "scripts/build_cop_profiles.py"
@@ -262,7 +289,10 @@ rule build_solar_thermal_profiles:
         solar_thermal_total="resources/solar_thermal_total_elec{weather_year}_s{simpl}_{clusters}.nc",
         solar_thermal_urban="resources/solar_thermal_urban_elec{weather_year}_s{simpl}_{clusters}.nc",
         solar_thermal_rural="resources/solar_thermal_rural_elec{weather_year}_s{simpl}_{clusters}.nc"
-    resources: mem_mb=20000
+    resources:
+        mem_mb=30000,  # NB: this rule uses a lot of memory!
+        runtime=15,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_solar_thermal_profiles/{weather_year}_s{simpl}_{clusters}"
     conda: "envs/environment.yaml"
     script: "scripts/build_solar_thermal_profiles.py"
@@ -281,7 +311,10 @@ rule build_energy_totals:
 	    co2_name='resources/co2_totals.csv',
 	    transport_name='resources/transport_data.csv'
     threads: 16
-    resources: mem_mb=10000
+    resources:
+        mem_mb=1000,
+        runtime=2,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_energy_totals"
     conda: "envs/environment.yaml"
     script: 'scripts/build_energy_totals.py'
@@ -294,7 +327,10 @@ rule build_heat_totals:
     output:
         heat_totals="resources/heat_totals.csv"
     threads: 1
-    resources: mem_mb=2000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_heat_totals"
     conda: "envs/environment.yaml"
     script: "scripts/build_heat_totals.py"
@@ -313,7 +349,10 @@ rule build_biomass_potentials:
         biomass_potentials_all='resources/biomass_potentials_all{weather_year}_s{simpl}_{clusters}.csv',
         biomass_potentials='resources/biomass_potentials{weather_year}_s{simpl}_{clusters}.csv'
     threads: 1
-    resources: mem_mb=1000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_biomass_potentials{weather_year}_s{simpl}_{clusters}"
     conda: "envs/environment.yaml"
     script: 'scripts/build_biomass_potentials.py'
@@ -326,7 +365,10 @@ if config["sector"]["biomass_transport"]:
         output:
             biomass_transport_costs="resources/biomass_transport_costs.csv",
         threads: 1
-        resources: mem_mb=1000
+        resources:
+            mem_mb=1000,
+            runtime=1,  # In minutes. TODO: Haven't checked this.
+        group: "pypsa-eur-sec-build"
         benchmark: "benchmarks/build_biomass_transport_costs"
         conda: "envs/environment.yaml"
         script: 'scripts/build_biomass_transport_costs.py'
@@ -343,7 +385,10 @@ rule build_salt_cavern_potentials:
     output:
         h2_cavern_potential="resources/salt_cavern_potentials{weather_year}_s{simpl}_{clusters}.csv"
     threads: 1
-    resources: mem_mb=2000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_salt_cavern_potentials{weather_year}_s{simpl}_{clusters}"
     conda: "envs/environment.yaml"
     script: "scripts/build_salt_cavern_potentials.py"
@@ -355,7 +400,10 @@ rule build_ammonia_production:
     output:
         ammonia_production="resources/ammonia_production.csv"
     threads: 1
-    resources: mem_mb=1000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_ammonia_production"
     conda: "envs/environment.yaml"
     script: 'scripts/build_ammonia_production.py'
@@ -368,7 +416,10 @@ rule build_industry_sector_ratios:
     output:
         industry_sector_ratios="resources/industry_sector_ratios.csv"
     threads: 1
-    resources: mem_mb=1000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industry_sector_ratios"
     conda: "envs/environment.yaml" 
     script: 'scripts/build_industry_sector_ratios.py'
@@ -382,7 +433,10 @@ rule build_industrial_production_per_country:
     output:
         industrial_production_per_country="resources/industrial_production_per_country.csv"
     threads: 8
-    resources: mem_mb=1000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_production_per_country"
     conda: "envs/environment.yaml"
     script: 'scripts/build_industrial_production_per_country.py'
@@ -394,7 +448,10 @@ rule build_industrial_production_per_country_tomorrow:
     output:
         industrial_production_per_country_tomorrow="resources/industrial_production_per_country_tomorrow_{planning_horizons}.csv"
     threads: 1
-    resources: mem_mb=1000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_production_per_country_tomorrow_{planning_horizons}"
     conda: "envs/environment.yaml"
     script: 'scripts/build_industrial_production_per_country_tomorrow.py'
@@ -408,7 +465,10 @@ rule build_industrial_distribution_key:
     output:
         industrial_distribution_key="resources/industrial_distribution_key_elec{weather_year}_s{simpl}_{clusters}.csv"
     threads: 1
-    resources: mem_mb=1000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_distribution_key/{weather_year}_s{simpl}_{clusters}"
     conda: "envs/environment.yaml"
     script: 'scripts/build_industrial_distribution_key.py'
@@ -421,7 +481,10 @@ rule build_industrial_production_per_node:
     output:
         industrial_production_per_node="resources/industrial_production_elec{weather_year}_s{simpl}_{clusters}_{planning_horizons}.csv"
     threads: 1
-    resources: mem_mb=1000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_production_per_node/{weather_year}_s{simpl}_{clusters}_{planning_horizons}"
     conda: "envs/environment.yaml"
     script: 'scripts/build_industrial_production_per_node.py'
@@ -435,7 +498,10 @@ rule build_industrial_energy_demand_per_node:
     output:
         industrial_energy_demand_per_node="resources/industrial_energy_demand_elec{weather_year}_s{simpl}_{clusters}_{planning_horizons}.csv"
     threads: 1
-    resources: mem_mb=1000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_energy_demand_per_node/{weather_year}_s{simpl}_{clusters}_{planning_horizons}"
     conda: "envs/environment.yaml"
     script: 'scripts/build_industrial_energy_demand_per_node.py'
@@ -449,7 +515,10 @@ rule build_industrial_energy_demand_per_country_today:
     output:
         industrial_energy_demand_per_country_today="resources/industrial_energy_demand_per_country_today.csv"
     threads: 8
-    resources: mem_mb=1000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_energy_demand_per_country_today"
     conda: "envs/environment.yaml"
     script: 'scripts/build_industrial_energy_demand_per_country_today.py'
@@ -462,7 +531,10 @@ rule build_industrial_energy_demand_per_node_today:
     output:
         industrial_energy_demand_per_node_today="resources/industrial_energy_demand_today_elec{weather_year}_s{simpl}_{clusters}.csv"
     threads: 1
-    resources: mem_mb=1000
+    resources:
+        mem_mb=1000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_energy_demand_per_node_today/{weather_year}_s{simpl}_{clusters}"
     conda: "envs/environment.yaml"
     script: 'scripts/build_industrial_energy_demand_per_node_today.py'
@@ -484,7 +556,10 @@ if config["sector"]["retrofitting"]["retro_endogen"]:
         output:
             retro_cost="resources/retro_cost_elec{weather_year}_s{simpl}_{clusters}.csv",
             floor_area="resources/floor_area_elec{weather_year}_s{simpl}_{clusters}.csv"
-        resources: mem_mb=1000
+        resources:
+            mem_mb=1000,
+            runtime=1,  # In minutes. TODO: Haven't checked this.
+        group: "pypsa-eur-sec-build"
         benchmark: "benchmarks/build_retro_cost/{weather_year}_s{simpl}_{clusters}"
         conda: "envs/environment.yaml"
         script: "scripts/build_retro_cost.py"
@@ -499,7 +574,10 @@ rule build_population_weighted_energy_totals:
         clustered_pop_layout="resources/pop_layout_elec{weather_year}_s{simpl}_{clusters}.csv"
     output: "resources/pop_weighted_{kind}_totals{weather_year}_s{simpl}_{clusters}.csv"
     threads: 1
-    resources: mem_mb=2000
+    resources:
+        mem_mb=2000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     conda: "envs/environment.yaml"
     script: "scripts/build_population_weighted_energy_totals.py"
 
@@ -518,7 +596,10 @@ rule build_transport_demand:
         avail_profile="resources/avail_profile{weather_year}_s{simpl}_{clusters}.csv",
         dsm_profile="resources/dsm_profile{weather_year}_s{simpl}_{clusters}.csv"
     threads: 1
-    resources: mem_mb=2000
+    resources:
+        mem_mb=2000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     conda: "envs/environment.yaml"
     script: "scripts/build_transport_demand.py"
 
@@ -568,12 +649,16 @@ rule prepare_sector_network:
         **gas_infrastructure
     output: RDIR + '/prenetworks/elec{weather_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}.nc'
     threads: 1
-    resources: mem_mb=2000
+    resources:
+        mem_mb=2000,
+        runtime=1,  # In minutes
+    group: "pypsa-eur-sec-build"
     benchmark: RDIR + "/benchmarks/prepare_network/elec{weather_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}"
     conda: "envs/environment.yaml"
     script: "scripts/prepare_sector_network.py"
 
 
+# Local rule
 rule plot_network:
     input:
         overrides="data/override_component_attrs",
@@ -588,6 +673,7 @@ rule plot_network:
     script: "scripts/plot_network.py"
 
 
+# Local rule
 rule copy_config:
     output: SDIR + '/configs/config.yaml'
     threads: 1
@@ -597,6 +683,7 @@ rule copy_config:
     script: "scripts/copy_config.py"
 
 
+# Local rule:
 rule make_summary:
     input:
         overrides="data/override_component_attrs",
@@ -632,6 +719,7 @@ rule make_summary:
     script: "scripts/make_summary.py"
 
 
+# Local rule:
 rule plot_summary:
     input:
         costs=SDIR + '/csvs/costs.csv',
@@ -646,6 +734,10 @@ rule plot_summary:
     benchmark: SDIR + "/benchmarks/plot_summary"
     conda: "envs/environment.yaml"
     script: "scripts/plot_summary.py"
+
+
+
+# TODO: Add runtime resource specifications to below solving rules
 
 
 if config["foresight"] == "overnight":
