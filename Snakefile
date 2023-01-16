@@ -338,7 +338,7 @@ rule build_heat_totals:
 
 rule build_biomass_potentials:
     input:
-        enspreso_biomass=HTTP.remote("https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/ENSPRESO/ENSPRESO_BIOMASS.xlsx", keep_local=True),
+        enspreso_biomass=ancient(HTTP.remote("https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/ENSPRESO/ENSPRESO_BIOMASS.xlsx", keep_local=True)),
         nuts2="data/nuts/NUTS_RG_10M_2013_4326_LEVL_2.geojson", # https://gisco-services.ec.europa.eu/distribution/v2/nuts/download/#nuts21
         regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
         nuts3_population=f"{pypsa_eur_path}/data/bundle/nama_10r_3popgdp.tsv.gz",
@@ -361,7 +361,7 @@ rule build_biomass_potentials:
 if config["sector"]["biomass_transport"]:
     rule build_biomass_transport_costs:
         input:
-            transport_cost_data=HTTP.remote("publications.jrc.ec.europa.eu/repository/bitstream/JRC98626/biomass potentials in europe_web rev.pdf", keep_local=True)
+            transport_cost_data=ancient(HTTP.remote("publications.jrc.ec.europa.eu/repository/bitstream/JRC98626/biomass potentials in europe_web rev.pdf", keep_local=True))
         output:
             biomass_transport_costs=RDIR + "/resources/biomass_transport_costs.csv",
         threads: 1
