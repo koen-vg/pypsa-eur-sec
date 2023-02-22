@@ -225,7 +225,7 @@ def add_co2_sequestration_limit(n, sns):
     lhs = linexpr((1, vars_final_co2_stored)).sum()
 
     limit = n.config["sector"].get("co2_sequestration_potential", 200) * 1e6
-    for o in opts:
+    for o in n.opts:
         if not "seq" in o: continue
         limit = float(o[o.find("seq")+3:])
         break
@@ -243,7 +243,7 @@ def add_co2_sequestration_limit(n, sns):
 def extra_functionality(n, snapshots):
     add_battery_constraints(n)
     add_pipe_retrofit_constraint(n)
-    add_co2_sequestration_limit(n, snapshots)
+    add_co2_sequestration_limit(n, n.snapshots)
 
 
 def solve_network(n, config, opts='', snapshots=None, **kwargs):
