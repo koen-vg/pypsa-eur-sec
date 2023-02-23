@@ -64,7 +64,7 @@ def _add_land_use_constraint_m(n):
     n.generators.p_nom_max.clip(lower=0, inplace=True)
 
 
-def prepare_network(n, solve_opts=None):
+def prepare_network(n, solve_opts=None, foresight="overnight"):
 
     if 'clip_p_max_pu' in solve_opts:
         for df in (n.generators_t.p_max_pu, n.generators_t.p_min_pu, n.storage_units_t.inflow):
@@ -100,7 +100,7 @@ def prepare_network(n, solve_opts=None):
         n.set_snapshots(n.snapshots[:nhours])
         n.snapshot_weightings[:] = 8760./nhours
 
-    if snakemake.config['foresight'] == 'myopic':
+    if foresight == 'myopic':
         add_land_use_constraint(n)
 
     return n
@@ -307,7 +307,7 @@ if __name__ == "__main__":
         overrides = override_component_attrs(snakemake.input.overrides)
         n = pypsa.Network(snakemake.input.network, override_component_attrs=overrides)
 
-        n = prepare_network(n, solve_opts)
+        n = prepare_network(n, solve_opts, snakemake.config["foresight"])
 
         n = solve_network(n, config=snakemake.config, opts=opts,
                           solver_dir=tmpdir,
