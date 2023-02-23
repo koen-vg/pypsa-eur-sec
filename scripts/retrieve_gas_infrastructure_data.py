@@ -17,13 +17,13 @@ if __name__ == "__main__":
         snakemake = mock_snakemake('retrieve_gas_network_data')
         rootpath = '..'
     else:
-        rootpath = '.'
+        rootpath = Path(snakemake.output[0]).parent.parent
 
     url = "https://zenodo.org/record/4767098/files/IGGIELGN.zip"
 
     # Save locations
     zip_fn = Path(f"{rootpath}/IGGIELGN.zip")
-    to_fn = Path(f"{rootpath}/data/gas_network/scigrid-gas")
+    to_fn = rootpath
 
     logger.info(f"Downloading databundle from '{url}'.")
     progress_retrieve(url, zip_fn)
