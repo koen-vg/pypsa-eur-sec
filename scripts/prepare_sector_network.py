@@ -2364,6 +2364,12 @@ if __name__ == "__main__":
     pop_weighted_heat_totals = pd.read_csv(snakemake.input.pop_weighted_heat_totals, index_col=0)
     pop_weighted_energy_totals.update(pop_weighted_heat_totals)
 
+    # This is where conventional generation is removed from the
+    # network. Store existing capacities for nuclear in an ad-hoc
+    # dataframe.
+    if "nuclear" in options["conventional_generation"]:
+        nuclear_caps = n.generators[n.generators.carrier == "nuclear"][["p_nom", "p_nom_min", "p_max_pu", "p_nom_extendable"]]
+
     patch_electricity_network(n)
 
     spatial = define_spatial(pop_layout.index, options)
@@ -2379,6 +2385,12 @@ if __name__ == "__main__":
     add_co2_tracking(n, options)
 
     add_generation(n, costs)
+
+    # We can add existing capacities for nuclear back to the network.
+    # Nuclear generators are now links, so we update them with the
+    # capacities, efficiencies from before. Make them not extendable.
+    if "nuclear" in options["conventional_generation"]:
+        n.links[n.links.carrier == "nuclear"].update(nuclear_caps)
 
     add_storage_and_grids(n, costs)
 
