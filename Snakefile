@@ -157,6 +157,7 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
     # Local rule
     rule retrieve_gas_infrastructure_data:
         output: expand("data/gas_network/scigrid-gas/data/{files}", files=datafiles)
+        conda: "envs/environment.yaml"
         script: 'scripts/retrieve_gas_infrastructure_data.py'
 
 
@@ -180,10 +181,10 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
             production="data/gas_network/scigrid-gas/data/IGGIELGN_Productions.geojson",
             planned_lng="data/gas_network/planned_LNGs.csv",
             regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
-            regions_offshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + 'regions_offshore{weather_year}_elec_s{simpl}_{clusters}.geojson'
+            regions_offshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + 'regions_offshore_elec{weather_year}_s{simpl}_{clusters}.geojson'
         output:
-            gas_input_nodes=RDIR + "/resources/gas_input_locations_s{simpl}_{clusters}.geojson",
-            gas_input_nodes_simplified=RDIR + "/resources/gas_input_locations_s{simpl}_{clusters}_simplified.csv"
+            gas_input_nodes=RDIR + "/resources/gas_input_locations{weather_year}_s{simpl}_{clusters}.geojson",
+            gas_input_nodes_simplified=RDIR + "/resources/gas_input_locations{weather_year}_s{simpl}_{clusters}_simplified.csv"
         resources:
             mem_mb=2000,
             runtime=1,  # In minutes
@@ -198,7 +199,7 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
             regions_onshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_onshore_elec{weather_year}_s{simpl}_{clusters}.geojson",
             regions_offshore=f"{pypsa_eur_path}/resources/{pypsaeur.RDIR}" + "regions_offshore_elec{weather_year}_s{simpl}_{clusters}.geojson"
         output:
-            clustered_gas_network=RDIR + "/resources/gas_network_elec_s{simpl}_{clusters}.csv"
+            clustered_gas_network=RDIR + "/resources/gas_network_elec{weather_year}_s{simpl}_{clusters}.csv"
         resources:
             mem_mb=4000,
             runtime=1, # In minutes
@@ -651,7 +652,7 @@ rule prepare_sector_network:
     threads: 1
     resources:
         mem_mb=2000,
-        runtime=1,  # In minutes
+        runtime=3,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: RDIR + "/benchmarks/prepare_network/elec{weather_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}"
     conda: "envs/environment.yaml"
