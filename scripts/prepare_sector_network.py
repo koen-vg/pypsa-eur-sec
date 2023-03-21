@@ -2329,8 +2329,109 @@ def limit_individual_line_extension(n, maxext):
     n.lines['s_nom_max'] = n.lines['s_nom'] + maxext
     hvdc = n.links.index[n.links.carrier == 'DC']
     n.links.loc[hvdc, 'p_nom_max'] = n.links.loc[hvdc, 'p_nom'] + maxext
+def apply_time_segmentation(
+    n, segments, solver_name="cbc", overwrite_time_dependent=True, drop_leap_day=False
+):
+    """
+    Aggregating time series to segments with different lengths.
+    Input:
+        n: pypsa Network
+        segments: (int) number of segments in which the typical period should be
+                  subdivided
+        solver_name: (str) name of solver
+        overwrite_time_dependent: (bool) overwrite time dependent data of pypsa network
+        with typical time series created by tsam
+    """
+    try:
+        import tsam.timeseriesaggregation as tsam
+    except:
+        raise ModuleNotFoundError(
+            "Optional dependency 'tsam' not found." "Install via 'pip install tsam'"
+        )
 
-#%%
+    # get all time-dependent data
+    columns = pd.MultiIndex.from_tuples([], names=["component", "key", "asset"])
+    raw = pd.DataFrame(index=n.snapshots, columns=columns)
+    for c in n.iterate_components():
+        for attr, pnl in c.pnl.items():
+            # exclude e_min_pu which is used for SOC of EVs in the morning
+            if not pnl.empty and attr != "e_min_pu":
+                df = pnl.copy()
+                df.columns = pd.MultiIndex.from_product([[c.name], [attr], df.columns])
+                raw = pd.concat([raw, df], axis=1)
+
+    # normalise all time-dependent data
+    annual_max = raw.max().replace(0, 1)
+    raw = raw.div(annual_max, level=0)
+
+    # get representative segments
+    agg = tsam.TimeSeriesAggregation(
+        raw,
+        hoursPerPeriod=len(raw),
+        noTypicalPeriods=1,
+        noSegments=int(segments),
+        segmentation=True,
+        solver=solver_name,
+    )
+    segmented = agg.createTypicalPeriods()
+
+    weightings = segmented.index.get_level_values("Segment Duration")
+    offsets = np.insert(np.cumsum(weightings[:-1]), 0, 0)
+    timesteps = [raw.index[0] + pd.Timedelta(f"{offset}h") for offset in offsets]
+    snapshots = pd.DatetimeIndex(timesteps)
+    sn_weightings = pd.Series(
+        weightings, index=snapshots, name="weightings", dtype="float64"
+    )
+
+    n.set_snapshots(sn_weightings.index)
+    n.snapshot_weightings = n.snapshot_weightings.mul(sn_weightings, axis=0)
+
+    # overwrite time-dependent data with timeseries created by tsam
+    if overwrite_time_dependent:
+        values_t = segmented.mul(annual_max).set_index(snapshots)
+        for component, key in values_t.columns.droplevel(2).unique():
+            n.pnl(component)[key] = values_t[component, key]
+
+    if drop_leap_day:
+        sns = n.snapshots[~((n.snapshots.month == 2) & (n.snapshots.day == 29))]
+        n.set_snapshots(sns)
+
+    return n
+
+
+def set_temporal_aggregation(n, opts, solver_name, drop_leap_day):
+    """
+    Aggregate network temporally.
+    """
+    # temporal averaging
+    for o in opts:
+        m = re.match(r"^\d+h$", o, re.IGNORECASE)
+        if m is not None:
+            n = average_every_nhours(n, m.group(0), drop_leap_day)
+            break
+
+    # representative snapshots
+    for o in opts:
+        m = re.match(r"(^\d+)sn$", o, re.IGNORECASE)
+        if m is not None:
+            sn = int(m[1])
+            logger.info(f"Use every {sn} snapshot as representative")
+            n.set_snapshots(n.snapshots[::sn])
+            n.snapshot_weightings *= sn
+            break
+
+    # segments with package tsam
+    for o in opts:
+        m = re.match(r"^(\d+)seg$", o, re.IGNORECASE)
+        if m is not None:
+            segments = int(m[1])
+            logger.info(f"Use temporal segmentation with {segments} segments")
+            n = apply_time_segmentation(
+                n, segments, solver_name=solver_name, drop_leap_day=drop_leap_day
+            )
+            break
+    return n
+
 if __name__ == "__main__":
     if 'snakemake' not in globals():
         from helper import mock_snakemake
@@ -2447,12 +2548,9 @@ if __name__ == "__main__":
     if options["co2_network"]:
         add_co2_network(n, costs)
 
-    for o in opts:
-        m = re.match(r'^\d+h$', o, re.IGNORECASE)
-        if m is not None:
-            drop_leap_day = snakemake.config["atlite"].get("drop_leap_day", False)
-            n = average_every_nhours(n, m.group(0), drop_leap_day)
-            break
+    solver_name = snakemake.config["solving"]["solver"]["name"]
+    drop_leap_day = snakemake.config["atlite"].get("drop_leap_day", False)
+    n = set_temporal_aggregation(n, opts, solver_name, drop_leap_day)
 
     limit_type = "config"
     limit = get(snakemake.config["co2_budget"], investment_year)
