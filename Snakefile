@@ -203,11 +203,13 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
         resources:
             mem_mb=4000,
             runtime=1, # In minutes
+        group: "pypsa-eur-sec-build"
         conda: "envs/environment.yaml"
         script: "scripts/cluster_gas_network.py"
 
 
     gas_infrastructure = {**rules.cluster_gas_network.output, **rules.build_gas_input_locations.output}
+
 else:
     gas_infrastructure = {}
 
