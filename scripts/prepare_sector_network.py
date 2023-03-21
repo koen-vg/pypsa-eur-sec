@@ -1699,6 +1699,11 @@ def create_nodes_for_heat_sector():
     # distribution of urban population within a country
     pop_layout["urban_ct_fraction"] = pop_layout.urban / pop_layout.ct.map(ct_urban.get)
 
+    # In some cases for some clustering, the total urban demand is 0,
+    # leading to a division by 0 in the above line. Fill na values
+    # with 0
+    pop_layout["urban_ct_fraction"] = pop_layout["urban_ct_fraction"].fillna(0)
+
     sectors = ["residential", "services"]
 
     nodes = {}
@@ -2369,6 +2374,9 @@ if __name__ == "__main__":
     # dataframe.
     if "nuclear" in options["conventional_generation"]:
         nuclear_caps = n.generators[n.generators.carrier == "nuclear"][["p_nom", "p_nom_min", "p_max_pu", "p_nom_extendable"]]
+        # Divide by the efficiency since this is taken into account in
+        # pypsa-eur-sec but not pypsa-eur.
+        nuclear_caps.loc[:, ["p_nom", "p_nom_min"]] /= costs.at["nuclear", "efficiency"]
 
     patch_electricity_network(n)
 
@@ -2390,7 +2398,7 @@ if __name__ == "__main__":
     # Nuclear generators are now links, so we update them with the
     # capacities, efficiencies from before. Make them not extendable.
     if "nuclear" in options["conventional_generation"]:
-        n.links[n.links.carrier == "nuclear"].update(nuclear_caps)
+        n.links.update(nuclear_caps)
 
     add_storage_and_grids(n, costs)
 
