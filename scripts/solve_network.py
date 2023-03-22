@@ -1,11 +1,13 @@
 """Solve network."""
 
+import re
+
 import pypsa
 
 import numpy as np
 import pandas as pd
 
-from pypsa.linopt import get_var, linexpr, define_constraints
+from pypsa.linopt import get_var, linexpr, define_constraints, join_exprs
 
 from pypsa.linopf import network_lopf, ilopf
 
@@ -290,10 +292,294 @@ def add_co2_sequestration_limit(n, sns):
     )
 
 
+def add_EQ_constraints(n, o, scaling=1e-1):
+    # Sanity check for EQ option
+    if not o[-1] == "c":
+        logging.warning(
+            "We only support country-level self-sufficiency "
+            "constraints! Ignore EQ option."
+        )
+        return
+
+    # Extract the self-sufficiency ratio
+    float_regex = "[0-9]*\.?[0-9]+"
+    level = float(re.findall(float_regex, o)[0])
+
+    # For the self-sufficiency ratio, we limit the ratio of imported
+    # energy to locally regenerated renewable energy. More
+    # specifically, locally produced (renewable) energy includes:
+    # - Variable renewables (wind, solar, hydro),
+    # - Biogas
+    # - Solid biomass
+    # - Nuclear power (considered "renewable" here)
+    # - Ambient heat (used in heat pumps)
+    # On the other hand, imported energy includes:
+    # - Electricity (grid)
+    # - Hydrogen (pipeline)
+    # - Gas
+    # For all the above, it's the _net_ import that's consider; export
+    # is counted as negative import. Gas has a special role
+    # implementation-wise; there is a gas network with pipelines but
+    # also "gas input" locations (implemented as PyPSA generators)
+    # which can inject (import) as into the network. These import
+    # locations represent both LNG terminals, pipeline imports and gas
+    # production (on gas rigs). While gas production isn't technically
+    # an import, we count it as such here. Rather, we don't count it
+    # as local renewable production.
+
+    # The self-sufficiency constraint takes the form
+    # `(1 - 1/level) * local_production + net_imports <= 0`
+
+    local_factor = 1 - 1 / level
+
+    # Start by building a collection of linear expressions
+    # representing local renewable energy input / production for each
+    # country.
+
+    # Total variable renewable energy production (by country)
+    var_renew_idx = n.generators.loc[
+        n.generators.carrier.isin(
+            [
+                "onwind",
+                "offwind-ac",
+                "offwind-dc",
+                "solar",
+                "ror",
+                "residential rural solar thermal",
+                "services rural solar thermal",
+                "residential urban decentral solar thermal",
+                "services urban decentral solar thermal",
+                "urban central solar thermal",
+                "solar rooftop",
+            ]
+        )
+    ].index
+    var_renew = (
+        linexpr(
+            (
+                local_factor * n.snapshot_weightings.generators,
+                get_var(n, "Generator", "p").loc[:, var_renew_idx].T,
+            )
+        )
+        .T.groupby(
+            n.generators.bus.map(n.buses.location).map(n.buses.country), axis="columns"
+        )
+        .apply(join_exprs)
+    )
+
+    # Total biogas and solid biomass production (by country)
+    biomass_idx = n.stores.loc[
+        n.stores.carrier.isin(
+            [
+                "biogas",
+                "solid biomass",
+            ]
+        )
+    ].index
+    # Total biomass (solid and biogas) potential is inserted in the
+    # network as initial store capacity. So we calculate the total
+    # amount of biomass produced in the country as the difference
+    # between the initial and final biomass "store" levels.
+    biomass_first_e = get_var(n, "Store", "e").loc[n.snapshots[0], biomass_idx]
+    biomass_last_e = get_var(n, "Store", "e").loc[n.snapshots[-1], biomass_idx]
+    biomass = (
+        pd.concat(
+            [
+                linexpr((local_factor, biomass_first_e)),
+                linexpr((-local_factor, biomass_last_e)),
+            ],
+            axis="rows",
+        )
+        .groupby(n.stores.bus.map(n.buses.location).map(n.buses.country))
+        .apply(join_exprs)
+    )
+
+    # Nuclear power
+    nuclear_idx = n.links.loc[n.links.carrier == "nuclear"].index
+    nuclear_coeffs = local_factor * pd.DataFrame(
+        np.outer(
+            n.snapshot_weightings.generators.values,
+            1 / n.links.loc[nuclear_idx, "efficiency"].values,
+        ),
+        index=n.snapshots,
+        columns=nuclear_idx,
+    )
+    nuclear = (
+        linexpr(
+            (
+                nuclear_coeffs,
+                get_var(n, "Link", "p").loc[:, nuclear_idx],
+            )
+        )
+        .groupby(n.links.bus1.map(n.buses.country), axis="columns")
+        .apply(join_exprs)
+    )
+
+    # Ambient heat for heat pumps
+    heat_pump_idx = n.links.filter(like="heat pump", axis="rows").index
+    # To get the ambient heat extracted, we subtract 1 from the
+    # efficiency of the heat pump (where "efficiency" is really COP
+    # for heat pumps).
+    from_ambient = n.links_t["efficiency"].loc[:, heat_pump_idx] - 1
+    ambient_heat_coeffs = local_factor * from_ambient.mul(
+        n.snapshot_weightings.generators, axis="rows"
+    )
+    ambient_heat = (
+        linexpr(
+            (
+                ambient_heat_coeffs,
+                get_var(n, "Link", "p").loc[:, heat_pump_idx],
+            )
+        )
+        .groupby(
+            n.links.bus1.map(n.buses.location).map(n.buses.country), axis="columns"
+        )
+        .apply(join_exprs)
+    )
+
+    # Total local renewable energy production
+    local_energy_prod = var_renew + biomass + nuclear + ambient_heat
+
+    # Now, we build a collection of linear expressions representing
+    # imported energy for each country.
+
+    # Electricity imports
+    # Lines crossing borders:
+    lines_in = {
+        c: n.lines.loc[
+            (n.lines.bus1.map(n.buses.country) == c)
+            & (n.lines.bus0.map(n.buses.country) != c)
+        ].index
+        for c in n.buses.country
+    }
+    lines_out = {
+        c: n.lines.loc[
+            (n.lines.bus0.map(n.buses.country) == c)
+            & (n.lines.bus1.map(n.buses.country) != c)
+        ].index
+        for c in n.buses.country
+    }
+
+    elec_imports = {
+        c: linexpr((n.snapshot_weightings.generators, get_var(n, "Line", "s").T))
+        .T.loc[:, lines_in[c]]
+        .sum()
+        .sum()
+        if len(lines_in[c]) > 0
+        else ""
+        for c in local_energy_prod.index
+    }
+    elec_exports = {
+        c: linexpr((-n.snapshot_weightings.generators, get_var(n, "Line", "s").T))
+        .T.loc[:, lines_out[c]]
+        .sum()
+        .sum()
+        if len(lines_out[c]) > 0
+        else ""
+        for c in local_energy_prod.index
+    }
+    elec_net_imports = {
+        c: elec_imports[c] + elec_exports[c] for c in local_energy_prod.index
+    }
+    elec_net_imports = pd.Series(elec_net_imports)
+
+    # Pipeline imports
+    pipeline_carriers = [
+        "H2 pipeline",
+        "H2 pipeline retrofitted",
+        "gas pipeline",
+        "gas pipeline new",
+        "solid biomass transport",  # Not a pipeline but functionally equivalent
+    ]
+    into_country = lambda c: (
+        (n.links.bus1.map(n.buses.location).map(n.buses.country) == c)
+        & (n.links.bus0.map(n.buses.location).map(n.buses.country) != c)
+    )
+    out_of_country = lambda c: (
+        (n.links.bus0.map(n.buses.location).map(n.buses.country) == c)
+        & (n.links.bus1.map(n.buses.location).map(n.buses.country) != c)
+    )
+    links_in = {
+        c: n.links.loc[
+            into_country(c) & (n.links.carrier.isin(pipeline_carriers))
+        ].index
+        for c in n.buses.country
+    }
+    links_out = {
+        c: n.links.loc[
+            out_of_country(c) & (n.links.carrier.isin(pipeline_carriers))
+        ].index
+        for c in n.buses.country
+    }
+
+    pipeline_imports = {
+        c: linexpr((n.snapshot_weightings.generators, get_var(n, "Link", "p").T))
+        .T.loc[:, links_in[c]]
+        .sum()
+        .sum()
+        if len(links_in[c]) > 0
+        else ""
+        for c in local_energy_prod.index
+    }
+    pipeline_exports = {
+        c: linexpr((-n.snapshot_weightings.generators, get_var(n, "Link", "p").T))
+        .T.loc[:, links_out[c]]
+        .sum()
+        .sum()
+        if len(links_out[c]) > 0
+        else ""
+        for c in local_energy_prod.index
+    }
+    pipeline_net_imports = {
+        c: pipeline_imports[c] + pipeline_exports[c] for c in local_energy_prod.index
+    }
+    pipeline_net_imports = pd.Series(pipeline_net_imports)
+
+    # Gas imports (LNG, pipeline, production)
+    gas_import = (
+        linexpr(
+            (
+                n.snapshot_weightings.generators,
+                get_var(n, "Generator", "p")
+                .loc[:, n.generators.loc[n.generators.carrier == "gas"].index]
+                .T,
+            )
+        )
+        .T.groupby(
+            n.generators.bus.map(n.buses.location).map(n.buses.country), axis="columns"
+        )
+        .apply(join_exprs)
+    )
+    gas_import = gas_import.reindex(local_energy_prod.index).fillna("")
+
+    # Total net imports
+    net_imports = elec_net_imports + pipeline_net_imports + gas_import
+
+    # Construct and add the final constraint
+    lhs = local_energy_prod + net_imports
+    name = "self_sufficiency"
+    sense = "<="
+
+    n.add(
+        "GlobalConstraint",
+        name,
+        sense=sense,
+        constant=0,
+        type=np.nan,
+        carrier_attribute=np.nan,
+    )
+
+    define_constraints(n, lhs, sense, 0, "GlobalConstraint", "mu", spec=name)
+
+
 def extra_functionality(n, snapshots):
     add_battery_constraints(n)
     add_pipe_retrofit_constraint(n)
     add_co2_sequestration_limit(n, n.snapshots)
+
+    for o in n.opts:
+        if o.startswith("EQ"):
+            add_EQ_constraints(n, o)
 
 
 def solve_network(n, config, opts="", snapshots=None, **kwargs):
