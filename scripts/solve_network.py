@@ -1,21 +1,15 @@
 """Solve network."""
 
+import logging
 import re
-
-import pypsa
 
 import numpy as np
 import pandas as pd
-
-from pypsa.linopt import get_var, linexpr, define_constraints, join_exprs
-
-from pypsa.linopf import network_lopf, ilopf
-
-from vresutils.benchmark import memory_logger
-
+import pypsa
 from helper import override_component_attrs
-
-import logging
+from pypsa.linopf import ilopf, network_lopf
+from pypsa.linopt import define_constraints, get_var, join_exprs, linexpr
+from vresutils.benchmark import memory_logger
 
 logger = logging.getLogger(__name__)
 pypsa.pf.logger.setLevel(logging.WARNING)
@@ -314,7 +308,7 @@ def add_EQ_constraints(n, o, scaling=1e-1):
     # - Nuclear power (considered "renewable" here)
     # - Ambient heat (used in heat pumps)
     # On the other hand, imported energy includes:
-    # - Electricity (grid)
+    # - Electricity (grid, AC & DC)
     # - Hydrogen (pipeline)
     # - Gas
     # For all the above, it's the _net_ import that's consider; export
@@ -326,6 +320,9 @@ def add_EQ_constraints(n, o, scaling=1e-1):
     # production (on gas rigs). While gas production isn't technically
     # an import, we count it as such here. Rather, we don't count it
     # as local renewable production.
+
+    # NB: We assume that biomass transport is enabled in the sector config! This
+    # is needed to get a spatially resolved biomass supply.
 
     # The self-sufficiency constraint takes the form
     # `(1 - 1/level) * local_production + net_imports <= 0`
@@ -367,7 +364,26 @@ def add_EQ_constraints(n, o, scaling=1e-1):
         .apply(join_exprs)
     )
 
-    # Total biogas and solid biomass production (by country)
+    # Total hydro production per country (implemented as storage_unit, not generator)
+    hydro_idx = n.storage_units.loc[n.storage_units.carrier == "hydro"].index
+    hydro = (
+        linexpr(
+            (
+                local_factor * n.snapshot_weightings.generators,
+                get_var(n, "StorageUnit", "p_dispatch").loc[:, hydro_idx].T,
+            )
+        )
+        .T.groupby(
+            n.storage_units.bus.map(n.buses.location).map(n.buses.country),
+            axis="columns",
+        )
+        .apply(join_exprs)
+    )
+    hydro = hydro.reindex(var_renew.index, fill_value="")
+
+    # Total biogas and solid biomass production (by country).
+    # NB: We assume that biomass transport is enabled! This is needed
+    # to get a spatially resolved biomass supply.
     biomass_idx = n.stores.loc[
         n.stores.carrier.isin(
             [
@@ -399,7 +415,7 @@ def add_EQ_constraints(n, o, scaling=1e-1):
     nuclear_coeffs = local_factor * pd.DataFrame(
         np.outer(
             n.snapshot_weightings.generators.values,
-            1 / n.links.loc[nuclear_idx, "efficiency"].values,
+            n.links.loc[nuclear_idx, "efficiency"].values,
         ),
         index=n.snapshots,
         columns=nuclear_idx,
@@ -438,7 +454,7 @@ def add_EQ_constraints(n, o, scaling=1e-1):
     )
 
     # Total local renewable energy production
-    local_energy_prod = var_renew + biomass + nuclear + ambient_heat
+    local_energy_prod = var_renew + hydro + biomass + nuclear + ambient_heat
 
     # Now, we build a collection of linear expressions representing
     # imported energy for each country.
@@ -490,6 +506,13 @@ def add_EQ_constraints(n, o, scaling=1e-1):
         "gas pipeline",
         "gas pipeline new",
         "solid biomass transport",  # Not a pipeline but functionally equivalent
+        "DC",  # Ditto
+        "Fischer-Tropsch",
+        "biomass to liquid",
+        "residential rural oil boiler",
+        "services rural oil boiler",
+        "residential urban decentral oil boiler",
+        "services urban decentral oil boiler",
     ]
     into_country = lambda c: (
         (n.links.bus1.map(n.buses.location).map(n.buses.country) == c)
