@@ -2835,6 +2835,7 @@ if __name__ == "__main__":
     # capacities, efficiencies from before. Make them not extendable.
     if "nuclear" in options["conventional_generation"]:
         n.links.update(nuclear_caps)
+        n.links.loc[n.links.carrier == "nuclear", "p_nom_extendable"] = False
 
     add_storage_and_grids(n, costs)
 
