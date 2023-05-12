@@ -10,7 +10,7 @@ dependencies:
 - python>=3.8
 - pip
 
-- pypsa==0.22.1
+- pypsa==0.23.0
 - atlite>=0.2.9
 - dask
 
@@ -29,6 +29,7 @@ dependencies:
 - pandas
 - geopandas>=0.11.0
 - xarray
+- rioxarray
 - netcdf4
 - networkx
 - scipy

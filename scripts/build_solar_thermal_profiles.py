@@ -22,7 +22,7 @@ if __name__ == '__main__':
     year = snakemake.wildcards.weather_year
 
     if year:
-        snapshots = dict(start=year, end=str(int(year)+1), closed="left")
+        snapshots = dict(start=year, end=str(int(year)+1), inclusive="left")
         cutout_name = cutout_name.format(weather_year=year)
     else:
         snapshots = snakemake.config['snapshots']

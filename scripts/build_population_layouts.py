@@ -22,7 +22,7 @@ if __name__ == '__main__':
     if year: cutout_name = cutout_name.format(weather_year=year)
     cutout = atlite.Cutout(cutout_name)
 
-    grid_cells = cutout.grid_cells()
+    grid_cells = cutout.grid.geometry
 
     # nuts3 has columns country, gdp, pop, geometry
     # population is given in dimensions of 1e3=k
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     reference = ["RS", "BA"]
     average = urban_fraction[reference].mean()
     fill_values = pd.Series({ct: average for ct in missing})
-    urban_fraction = urban_fraction.append(fill_values)
+    urban_fraction = pd.concat([urban_fraction, fill_values])
 
     # population in each grid cell
     pop_cells = pd.Series(I.dot(nuts3['pop']))

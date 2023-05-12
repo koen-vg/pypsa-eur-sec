@@ -86,7 +86,7 @@ if config.get('retrieve_sector_databundle', True):
     rule retrieve_sector_databundle:
         output: *datafiles
         log: "logs/retrieve_sector_databundle.log"
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: 'scripts/retrieve_sector_databundle.py'
 
 
@@ -105,7 +105,7 @@ rule build_population_layouts:
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_population_layouts{weather_year}"
     threads: 8
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_population_layouts.py"
 
 
@@ -123,7 +123,7 @@ rule build_clustered_population_layouts:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_clustered_population_layouts/{weather_year}_s{simpl}_{clusters}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_clustered_population_layouts.py"
 
 
@@ -141,7 +141,7 @@ rule build_simplified_population_layouts:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_clustered_population_layouts/{weather_year}_s{simpl}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_clustered_population_layouts.py"
 
 
@@ -157,7 +157,7 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
     # Local rule
     rule retrieve_gas_infrastructure_data:
         output: expand("data/gas_network/scigrid-gas/data/{files}", files=datafiles)
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: 'scripts/retrieve_gas_infrastructure_data.py'
 
 
@@ -170,7 +170,7 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
             mem_mb=4000,
             runtime=1,  # In minutes
         group: "pypsa-eur-sec-build"
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: "scripts/build_gas_network.py"
 
 
@@ -189,7 +189,7 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
             mem_mb=2000,
             runtime=1,  # In minutes
         group: "pypsa-eur-sec-build"
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: "scripts/build_gas_input_locations.py"
 
 
@@ -204,7 +204,7 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
             mem_mb=4000,
             runtime=1, # In minutes
         group: "pypsa-eur-sec-build"
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: "scripts/cluster_gas_network.py"
 
 
@@ -230,7 +230,7 @@ rule build_heat_demands:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_heat_demands/{weather_year}_s{simpl}_{clusters}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_heat_demand.py"
 
 
@@ -253,7 +253,7 @@ rule build_temperature_profiles:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_temperature_profiles/{weather_year}_s{simpl}_{clusters}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_temperature_profiles.py"
 
 
@@ -277,7 +277,7 @@ rule build_cop_profiles:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_cop_profiles/{weather_year}_s{simpl}_{clusters}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_cop_profiles.py"
 
 
@@ -297,7 +297,7 @@ rule build_solar_thermal_profiles:
         runtime=15,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_solar_thermal_profiles/{weather_year}_s{simpl}_{clusters}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_solar_thermal_profiles.py"
 
 
@@ -319,7 +319,7 @@ rule build_energy_totals:
         runtime=2,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_energy_totals"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_energy_totals.py'
 
 
@@ -335,7 +335,7 @@ rule build_heat_totals:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_heat_totals"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_heat_totals.py"
 
 
@@ -357,7 +357,7 @@ rule build_biomass_potentials:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_biomass_potentials{weather_year}_s{simpl}_{clusters}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_biomass_potentials.py'
 
 
@@ -373,7 +373,7 @@ if config["sector"]["biomass_transport"]:
             runtime=1,  # In minutes. TODO: Haven't checked this.
         group: "pypsa-eur-sec-build"
         benchmark: "benchmarks/build_biomass_transport_costs"
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: 'scripts/build_biomass_transport_costs.py'
     build_biomass_transport_costs_output = rules.build_biomass_transport_costs.output
 else:
@@ -393,7 +393,7 @@ rule build_salt_cavern_potentials:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_salt_cavern_potentials{weather_year}_s{simpl}_{clusters}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_salt_cavern_potentials.py"
 
 
@@ -408,7 +408,7 @@ rule build_ammonia_production:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_ammonia_production"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_ammonia_production.py'
 
 
@@ -424,7 +424,7 @@ rule build_industry_sector_ratios:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industry_sector_ratios"
-    conda: "envs/environment.yaml" 
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_industry_sector_ratios.py'
 
 
@@ -441,7 +441,7 @@ rule build_industrial_production_per_country:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_production_per_country"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_industrial_production_per_country.py'
 
 
@@ -456,7 +456,7 @@ rule build_industrial_production_per_country_tomorrow:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_production_per_country_tomorrow_{planning_horizons}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_industrial_production_per_country_tomorrow.py'
 
 
@@ -473,7 +473,7 @@ rule build_industrial_distribution_key:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_distribution_key/{weather_year}_s{simpl}_{clusters}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_industrial_distribution_key.py'
 
 
@@ -489,7 +489,7 @@ rule build_industrial_production_per_node:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_production_per_node/{weather_year}_s{simpl}_{clusters}_{planning_horizons}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_industrial_production_per_node.py'
 
 
@@ -506,7 +506,7 @@ rule build_industrial_energy_demand_per_node:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_energy_demand_per_node/{weather_year}_s{simpl}_{clusters}_{planning_horizons}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_industrial_energy_demand_per_node.py'
 
 
@@ -523,7 +523,7 @@ rule build_industrial_energy_demand_per_country_today:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_energy_demand_per_country_today"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_industrial_energy_demand_per_country_today.py'
 
 
@@ -539,7 +539,7 @@ rule build_industrial_energy_demand_per_node_today:
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: "benchmarks/build_industrial_energy_demand_per_node_today/{weather_year}_s{simpl}_{clusters}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: 'scripts/build_industrial_energy_demand_per_node_today.py'
 
 
@@ -564,7 +564,7 @@ if config["sector"]["retrofitting"]["retro_endogen"]:
             runtime=1,  # In minutes. TODO: Haven't checked this.
         group: "pypsa-eur-sec-build"
         benchmark: "benchmarks/build_retro_cost/{weather_year}_s{simpl}_{clusters}"
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: "scripts/build_retro_cost.py"
     build_retro_cost_output = rules.build_retro_cost.output
 else:
@@ -581,7 +581,7 @@ rule build_population_weighted_energy_totals:
         mem_mb=2000,
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_population_weighted_energy_totals.py"
 
 
@@ -603,7 +603,7 @@ rule build_transport_demand:
         mem_mb=2000,
         runtime=1,  # In minutes
     group: "pypsa-eur-sec-build"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/build_transport_demand.py"
 
 
@@ -657,7 +657,7 @@ rule prepare_sector_network:
         runtime=3,  # In minutes
     group: "pypsa-eur-sec-build"
     benchmark: RDIR + "/benchmarks/prepare_network/elec{weather_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/prepare_sector_network.py"
 
 
@@ -672,7 +672,7 @@ rule plot_network:
     threads: 2
     resources: mem_mb=10000
     benchmark: RDIR + "/benchmarks/plot_network/elec{weather_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/plot_network.py"
 
 
@@ -682,7 +682,7 @@ rule copy_config:
     threads: 1
     resources: mem_mb=1000
     benchmark: SDIR + "/benchmarks/copy_config"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/copy_config.py"
 
 
@@ -718,7 +718,7 @@ rule make_summary:
     threads: 2
     resources: mem_mb=10000
     benchmark: SDIR + "/benchmarks/make_summary"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/make_summary.py"
 
 
@@ -735,7 +735,7 @@ rule plot_summary:
     threads: 2
     resources: mem_mb=10000
     benchmark: SDIR + "/benchmarks/plot_summary"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/plot_summary.py"
 
 
@@ -760,7 +760,7 @@ if config["foresight"] == "overnight":
         threads: config['solving']['solver'].get('threads', 4)
         resources: mem_mb=config['solving']['mem']
         benchmark: RDIR + "/benchmarks/solve_network/elec{weather_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}"
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: "scripts/solve_network.py"
 
 
@@ -788,7 +788,7 @@ if config["foresight"] == "myopic":
         threads: 1
         resources: mem_mb=2000
         benchmark: RDIR + '/benchmarks/add_existing_baseyear/elec{weather_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}'
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: "scripts/add_existing_baseyear.py"
 
 
@@ -811,7 +811,7 @@ if config["foresight"] == "myopic":
         threads: 4
         resources: mem_mb=10000
         benchmark: RDIR + '/benchmarks/add_brownfield/elec{weather_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}'
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: "scripts/add_brownfield.py"
 
 
@@ -833,7 +833,7 @@ if config["foresight"] == "myopic":
         threads: 4
         resources: mem_mb=config['solving']['mem']
         benchmark: RDIR + "/benchmarks/solve_network/elec{weather_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}"
-        conda: "envs/environment.yaml"
+        conda: "envs/environment.fixed.yaml"
         script: "scripts/solve_network.py"
 
 
@@ -850,7 +850,7 @@ rule solve_operations_network:
     threads: 4
     resources: mem_mb=10000
     benchmark: RDIR + "/benchmarks/solve_operations_network/elec{capacity_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}_{weather_year}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/solve_operations_network.py"
 
 
@@ -873,5 +873,5 @@ rule solve_operations_network_myopic:
     threads: 4
     resources: mem_mb=10000
     benchmark: RDIR + "/benchmarks/solve_operations_network_myopic/elec{capacity_year}_s{simpl}_{clusters}_lv{lv}_{opts}_{sector_opts}_{planning_horizons}_{weather_year}"
-    conda: "envs/environment.yaml"
+    conda: "envs/environment.fixed.yaml"
     script: "scripts/solve_operations_network_myopic.py"
