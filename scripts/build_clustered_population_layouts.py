@@ -20,8 +20,10 @@ if __name__ == '__main__':
     if year: cutout_name = cutout_name.format(weather_year=year)
     cutout = atlite.Cutout(cutout_name)
 
-    clustered_regions = gpd.read_file(
-        snakemake.input.regions_onshore).set_index('name').buffer(0).squeeze()
+    # Load the onshore model regions
+    clustered_regions = gpd.read_file(snakemake.input.regions_onshore).set_index('name')
+    # Simplify the geometry
+    clustered_regions.geometry = clustered_regions.geometry.buffer(0).squeeze()
 
     I = cutout.indicatormatrix(clustered_regions)
 
@@ -32,8 +34,8 @@ if __name__ == '__main__':
 
     pop = pd.DataFrame(pop, index=clustered_regions.index)
 
-    pop["ct"] = pop.index.str[:2]
-    country_population = pop.total.groupby(pop.ct).sum()
-    pop["fraction"] = pop.total / pop.ct.map(country_population)
+    pop["country"] = clustered_regions["country"]
+    country_population = pop.total.groupby(pop.country).sum()
+    pop["fraction"] = pop.total / pop.country.map(country_population)
 
     pop.to_csv(snakemake.output.clustered_pop_layout)

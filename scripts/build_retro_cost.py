@@ -201,9 +201,12 @@ def prepare_building_stock_data():
 
     # for still missing countries calculate floor area by population size
     pop_layout = pd.read_csv(snakemake.input.clustered_pop_layout, index_col=0)
-    pop_layout["ct"] = pop_layout.index.str[:2]
-    ct_total = pop_layout.total.groupby(pop_layout["ct"]).sum()
+    ct_total = pop_layout.total.groupby(pop_layout["country"]).sum()
 
+    # TODO: the following doesn't work yet when countries are
+    # clustered, and the index of `ct_total` may contain elements such
+    # as "AA_BB_CC". This leads to NaN values in the `area_per_pop`
+    # dataframe upon the reindexing.
     area_per_pop = area_tot.unstack().reindex(index=ct_total.index).apply(lambda x: x / ct_total[x.index])
     missing_area_ct = ct_total.index.difference(area_tot.index.levels[0])
     for ct in missing_area_ct.intersection(ct_total.index):
@@ -442,6 +445,7 @@ def prepare_temperature_data():
 
     """
     temperature = xr.open_dataarray(snakemake.input.air_temperature).to_pandas()
+    # TODO: The following is incorrect when countries are clustered together!
     d_heat = (temperature.groupby(temperature.columns.str[:2], axis=1).mean()
            .resample("1D").mean()<t_threshold).sum()
     temperature_average_d_heat = (temperature.groupby(temperature.columns.str[:2], axis=1)

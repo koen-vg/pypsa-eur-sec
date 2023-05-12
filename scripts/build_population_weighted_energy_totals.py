@@ -22,7 +22,18 @@ if __name__ == '__main__':
     totals = pd.read_csv(snakemake.input.totals, index_col=[0,1])
     totals = totals.xs(data_year, level='year')
 
-    nodal_totals = totals.loc[pop_layout.ct].fillna(0.)
+    # Since our model nodes may consist of multiple countries (i.e.
+    # pop_layout.country can look like "AA_BB_CC"), we need to
+    # aggregate the energy totals to this level before proceeding. The
+    # aggregation is by summing up the energy totals, except the
+    # district heating share column, which should be averaged.
+    node_countries = totals.index.map(lambda c: next(x for x in pop_layout.country if c in x))
+    agg_funcs = {c: "sum" for c in totals.columns}
+    if "district heat share" in agg_funcs:
+        agg_funcs["district heat share"] = "mean"
+    totals = totals.groupby(node_countries).agg(agg_funcs)
+
+    nodal_totals = totals.loc[pop_layout.country].fillna(0.)
     nodal_totals.index = pop_layout.index
     nodal_totals = nodal_totals.multiply(pop_layout.fraction, axis=0)
 

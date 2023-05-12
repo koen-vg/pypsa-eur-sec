@@ -33,7 +33,6 @@ def build_nodal_industrial_energy_demand():
 
     fn = snakemake.input.industrial_distribution_key
     keys = pd.read_csv(fn, index_col=0)
-    keys["country"] = keys.index.str[:2]
 
     nodal_demand = pd.DataFrame(0., dtype=float,
                                 index=keys.index,
@@ -48,7 +47,13 @@ def build_nodal_industrial_energy_demand():
         mapping = sector_mapping.get(sector, 'population')
 
         key = keys.loc[buses, mapping]
-        demand = industrial_demand[country, sector]
+
+        # When retrieving demand, be careful to take demand for all
+        # countries belonging to each model region. Here, "country"
+        # can be of the form "AA_BB_CC" whereas the
+        # `industrial_demand` dataframe is given over single countries
+        # only.
+        demand = industrial_demand.loc[:, (country.split("_"), sector)].sum(axis="columns")
 
         outer = pd.DataFrame(np.outer(key, demand),
                             index=key.index,

@@ -77,8 +77,6 @@ def prepare_hotmaps_database(regions):
     gdf = gpd.sjoin(gdf, regions, how="inner", **kws)
 
     gdf.rename(columns={"index_right": "bus"}, inplace=True)
-    gdf["country"] = gdf.bus.str[:2]
-
     return gdf
 
 
@@ -86,18 +84,17 @@ def build_nodal_distribution_key(hotmaps, regions):
     """Build nodal distribution keys for each sector."""
 
     sectors = hotmaps.Subsector.unique()
-    countries = regions.index.str[:2].unique()
+    countries = regions.country.unique()
 
     keys = pd.DataFrame(index=regions.index, columns=sectors, dtype=float)
+    keys["country"] = regions.country
 
     pop = pd.read_csv(snakemake.input.clustered_pop_layout, index_col=0)
-    pop['country'] = pop.index.str[:2]
-    ct_total = pop.total.groupby(pop['country']).sum()
-    keys['population'] = pop.total / pop.country.map(ct_total)
+    keys['population'] = pop.fraction
 
     for sector, country in product(sectors, countries):
 
-        regions_ct = regions.index[regions.index.str.contains(country)]
+        regions_ct = regions.index[regions.country == country]
 
         facilities = hotmaps.query("country == @country and Subsector == @sector")
 

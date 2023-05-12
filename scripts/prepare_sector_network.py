@@ -162,7 +162,7 @@ def co2_emissions_year(countries, opts, year):
     else:
         eurostat_co2 = build_eurostat_co2(year)
 
-    co2_totals = build_co2_totals(eea_co2, eurostat_co2)
+    co2_totals = build_co2_totals(countries, eea_co2, eurostat_co2)
 
     sectors = emission_sectors_from_opts(opts)
 
@@ -1866,9 +1866,9 @@ def create_nodes_for_heat_sector():
     # urban are areas with high heating density
     # urban can be split into district heating (central) and individual heating (decentral)
 
-    ct_urban = pop_layout.urban.groupby(pop_layout.ct).sum()
+    ct_urban = pop_layout.urban.groupby(pop_layout.country).sum()
     # distribution of urban population within a country
-    pop_layout["urban_ct_fraction"] = pop_layout.urban / pop_layout.ct.map(ct_urban.get)
+    pop_layout["urban_ct_fraction"] = pop_layout.urban / pop_layout.country.map(ct_urban.get)
 
     # In some cases for some clustering, the total urban demand is 0,
     # leading to a division by 0 in the above line. Fill na values
@@ -1991,10 +1991,13 @@ def add_biomass(n, costs):
         biomass_transport = create_network_topology(
             n, "biomass transport ", bidirectional=False
         )
-
         # costs
-        bus0_costs = biomass_transport.bus0.apply(lambda x: transport_costs[x[:2]])
-        bus1_costs = biomass_transport.bus1.apply(lambda x: transport_costs[x[:2]])
+        bus0_costs = biomass_transport.bus0.apply(
+            lambda x: transport_costs[n.buses.at[x, "country"].split("_")].mean()
+        )
+        bus1_costs = biomass_transport.bus1.apply(
+            lambda x: transport_costs[n.buses.at[x, "country"].split("_")].mean()
+        )
         biomass_transport["costs"] = pd.concat([bus0_costs, bus1_costs], axis=1).mean(
             axis=1
         )

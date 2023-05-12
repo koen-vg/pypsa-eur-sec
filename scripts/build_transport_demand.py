@@ -10,7 +10,24 @@ def build_nodal_transport_data(fn, pop_layout):
 
     transport_data = pd.read_csv(fn, index_col=0)
 
-    nodal_transport_data = transport_data.loc[pop_layout.ct].fillna(0.0)
+    # Since our model nodes may consist of multiple countries (i.e.
+    # pop_layout.country can look like "AA_BB_CC"), we need to
+    # aggregate the energy totals to this level before proceeding. The
+    # aggregation is by summing up the energy totals, except the
+    # district heating share column, which should be averaged.
+    node_countries = transport_data.index.map(
+        lambda c: next(x for x in pop_layout.country if c in x)
+    )
+    transport_data = transport_data.groupby(node_countries).agg(
+        {
+            "number cars": "sum",
+            "average fuel efficiency": lambda eff: np.average(
+                eff, weights=transport_data.loc[eff.index, "number cars"]
+            ),
+        }
+    )
+
+    nodal_transport_data = transport_data.loc[pop_layout.country].fillna(0.0)
     nodal_transport_data.index = pop_layout.index
     nodal_transport_data["number cars"] = (
         pop_layout["fraction"] * nodal_transport_data["number cars"]
@@ -19,6 +36,9 @@ def build_nodal_transport_data(fn, pop_layout):
         nodal_transport_data["average fuel efficiency"] == 0.0,
         "average fuel efficiency",
     ] = transport_data["average fuel efficiency"].mean()
+
+    # Don't allow efficiency to be greater than 1 (saw this for LU once).
+    nodal_transport_data["average fuel efficiency"].clip(upper=1, inplace=True)
 
     return nodal_transport_data
 
@@ -173,7 +193,7 @@ if __name__ == "__main__":
     options = snakemake.config["sector"]
 
     year = snakemake.wildcards.weather_year
-    snapshots = dict(start=year, end=str(int(year)+1), closed="left") if year else snakemake.config['snapshots']
+    snapshots = dict(start=year, end=str(int(year)+1), inclusive="left") if year else snakemake.config['snapshots']
     snapshots = pd.date_range(freq='h', **snapshots, tz="UTC")
     if snakemake.config["atlite"].get("drop_leap_day", False):
         leap_day = (snapshots.month == 2) & (snapshots.day == 29)

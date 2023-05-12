@@ -23,7 +23,7 @@ def load_bus_regions(onshore_path, offshore_path):
     bus_regions_offshore = gpd.read_file(offshore_path)
     bus_regions_onshore = gpd.read_file(onshore_path)
     bus_regions = concat_gdf([bus_regions_offshore, bus_regions_onshore])
-    bus_regions = bus_regions.dissolve(by='name', aggfunc='sum')
+    bus_regions = bus_regions.dissolve(by='name')
 
     return bus_regions
 

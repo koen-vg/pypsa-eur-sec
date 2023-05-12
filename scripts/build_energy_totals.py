@@ -630,6 +630,10 @@ def build_eurostat_co2(countries, eurostat=None, year=1990):
 
 def build_co2_totals(countries, eea_co2, eurostat_co2):
 
+    # TODO: this will not work when `countries` includes clustered countries!
+    if any("_" in c for c in countries):
+        raise NotImplementedError("`build_co2_totals doesn't work with clustered countries!")
+
     co2 = eea_co2.reindex(countries)
 
     for ct in countries.intersection(["BA", "RS", "AL", "ME", "MK"]):

@@ -36,7 +36,6 @@ def build_nodal_industrial_production():
 
     fn = snakemake.input.industrial_distribution_key
     keys = pd.read_csv(fn, index_col=0)
-    keys["country"] = keys.index.str[:2]
 
     nodal_production = pd.DataFrame(index=keys.index,
                                     columns=industrial_production.columns,
@@ -50,8 +49,15 @@ def build_nodal_industrial_production():
         buses = keys.index[keys.country == country]
         mapping = sector_mapping.get(sector, "population")
 
+        # When retrieving industrial production, be careful to take
+        # production for all countries belonging to each model region.
+        # Here, "country" can be of the form "AA_BB_CC" whereas the
+        # `industrial_production` dataframe is given over single
+        # countries only.
         key = keys.loc[buses, mapping]
-        nodal_production.loc[buses, sector] = industrial_production.at[country, sector] * key
+        nodal_production.loc[buses, sector] = (
+            industrial_production.loc[country.split("_"), sector].sum() * key
+        )
 
     nodal_production.to_csv(snakemake.output.industrial_production_per_node)
 

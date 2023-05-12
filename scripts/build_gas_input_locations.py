@@ -80,10 +80,22 @@ if __name__ == "__main__":
     # entry points are still in Russian or Ukrainian territory.
     buffer = 9000 # meters
     eastern_countries = ['FI', 'EE', 'LT', 'LV', 'PL', 'SK', 'HU', 'RO']
-    add_buffer_b = regions.index.str[:2].isin(eastern_countries)
-    regions.loc[add_buffer_b] = regions[add_buffer_b].to_crs(3035).buffer(buffer).to_crs(4326)
+    add_buffer_b = regions.country.map(lambda r: any(c in r for c in eastern_countries))
+    regions.loc[add_buffer_b, "geometry"] = (
+        regions[add_buffer_b].to_crs(3035).buffer(buffer).to_crs(4326).geometry
+    )
 
-    countries = regions.index.str[:2].unique().str.replace("GB", "UK")
+    # Some coastal entry points manage to just fall between onshore
+    # and offshore regions; this is fixed by adding an even smaller
+    # buffer of 1km to all regions.
+    regions.geometry = regions.geometry.to_crs(3035).buffer(1000).to_crs(4326).geometry
+
+    # Extract a list of countries represented in the model regions,
+    # taking care to deal with regions spanning multiple countries
+    # (whose "country" attribute is of the form "AA_BB_CC")
+    countries = list(set(c for r in regions.country for c in r.split("_")))
+    # The gas input data uses the country code "UK" instead of "GB"
+    countries = [c.replace("GB", "UK") for c in countries]
 
     gas_input_locations = build_gas_input_locations(
         snakemake.input.lng,
