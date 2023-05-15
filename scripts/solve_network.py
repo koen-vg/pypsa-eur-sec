@@ -76,7 +76,7 @@ def _add_land_use_constraint_m(n):
     n.generators.p_nom_max.clip(lower=0, inplace=True)
 
 
-def prepare_network(n, solve_opts=None, foresight="overnight"):
+def prepare_network(n, solve_opts=None, foresight="overnight", config=None):
     if "clip_p_max_pu" in solve_opts:
         for df in (
             n.generators_t.p_max_pu,
@@ -124,6 +124,10 @@ def prepare_network(n, solve_opts=None, foresight="overnight"):
 
     if foresight == "myopic":
         add_land_use_constraint(n)
+
+    if n.stores.carrier.eq("co2 stored").any():
+        limit = config["sector"].get("co2_sequestration_potential", 200)
+        add_co2_sequestration_limit(n, limit=limit)
 
     return n
 
@@ -252,37 +256,27 @@ def add_pipe_retrofit_constraint(n):
     define_constraints(n, lhs, "=", pipe_capacity, "Link", "pipe_retrofit")
 
 
-def add_co2_sequestration_limit(n, sns):
-    co2_stores = n.stores.loc[n.stores.carrier == "co2 stored"].index
+def add_co2_sequestration_limit(n, limit=200):
+    """
+    Add a global constraint on the amount of Mt CO2 that can be sequestered.
+    """
+    n.carriers.loc["co2 stored", "co2_absorptions"] = -1
+    n.carriers.co2_absorptions = n.carriers.co2_absorptions.fillna(0)
 
-    if co2_stores.empty or ("Store", "e") not in n.variables.index:
-        return
-
-    vars_final_co2_stored = get_var(n, "Store", "e").loc[sns[-1], co2_stores]
-
-    lhs = linexpr((1, vars_final_co2_stored)).sum()
-
-    limit = n.config["sector"].get("co2_sequestration_potential", 200) * 1e6
+    limit = limit * 1e6
     for o in n.opts:
-        if not "seq" in o:
+        if "seq" not in o:
             continue
-        limit = float(o[o.find("seq") + 3 :])
+        limit = float(o[o.find("seq") + 3 :]) * 1e6
         break
-
-    name = "co2_sequestration_limit"
-    sense = "<="
 
     n.add(
         "GlobalConstraint",
-        name,
-        sense=sense,
+        "co2_sequestration_limit",
+        sense="<=",
         constant=limit,
-        type=np.nan,
-        carrier_attribute=np.nan,
-    )
-
-    define_constraints(
-        n, lhs, sense, limit, "GlobalConstraint", "mu", axes=pd.Index([name]), spec=name
+        type="primary_energy",
+        carrier_attribute="co2_absorptions",
     )
 
 
@@ -598,7 +592,6 @@ def add_EQ_constraints(n, o, scaling=1e-1):
 def extra_functionality(n, snapshots):
     add_battery_constraints(n)
     add_pipe_retrofit_constraint(n)
-    add_co2_sequestration_limit(n, n.snapshots)
 
     for o in n.opts:
         if o.startswith("EQ"):
@@ -679,7 +672,7 @@ if __name__ == "__main__":
         overrides = override_component_attrs(snakemake.input.overrides)
         n = pypsa.Network(snakemake.input.network, override_component_attrs=overrides)
 
-        n = prepare_network(n, solve_opts, snakemake.config["foresight"])
+        n = prepare_network(n, solve_opts, snakemake.config["foresight"], snakemake.config)
 
         n = solve_network(
             n,
