@@ -12,9 +12,8 @@ def build_nodal_transport_data(fn, pop_layout):
 
     # Since our model nodes may consist of multiple countries (i.e.
     # pop_layout.country can look like "AA_BB_CC"), we need to
-    # aggregate the energy totals to this level before proceeding. The
-    # aggregation is by summing up the energy totals, except the
-    # district heating share column, which should be averaged.
+    # aggregate the transport data to this level before proceeding. The
+    # aggregation is by summing up the cars and weighing the efficiencies this way.
     node_countries = transport_data.index.map(
         lambda c: next(x for x in pop_layout.country if c in x)
     )

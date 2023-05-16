@@ -186,10 +186,15 @@ def convert_nuts2_to_regions(bio_nuts2, regions):
     adjust_cols = overlay.columns.difference({"name", "area_nuts2", "geometry", "share", "country"})
     overlay[adjust_cols] = overlay[adjust_cols].multiply(overlay["share"], axis=0)
 
-    bio_regions = overlay.dissolve("name", aggfunc="sum")
+    agg_funcs = {c: "sum" for c in overlay.columns if c != "geometry"}
+    if "country" in agg_funcs:
+        agg_funcs["country"] = "max"
 
-    bio_regions.drop(["area_nuts2", "share"], axis=1, inplace=True)
-    
+
+    bio_regions = overlay.dissolve("name", aggfunc=agg_funcs)
+
+    bio_regions.drop(["area_nuts2", "share", "name"], axis=1, inplace=True)
+
     return bio_regions
 
 
