@@ -582,11 +582,11 @@ def add_EQ_constraints(n, o, scaling=1e-1):
         name,
         sense=sense,
         constant=0,
-        type=np.nan,
-        carrier_attribute=np.nan,
+        type="self_sufficiency",
+        carrier_attribute="energy",
     )
 
-    define_constraints(n, lhs, sense, 0, "GlobalConstraint", "mu", spec=name)
+    define_constraints(n, lhs, sense, 0, "GlobalConstraint", "mu", axes=pd.Index([name]), spec=name)
 
 
 def extra_functionality(n, snapshots):
