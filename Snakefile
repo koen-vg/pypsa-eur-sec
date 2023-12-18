@@ -282,8 +282,8 @@ if config["sector"]["gas_network"] or config["sector"]["H2_retrofit"]:
     }
 
 
-# else:
-#     gas_infrastructure = {}
+else:
+    gas_infrastructure = {}
 
 
 rule build_heat_demands:
@@ -533,8 +533,8 @@ if config["sector"]["biomass_transport"]:
     build_biomass_transport_costs_output = rules.build_biomass_transport_costs.output
 
 
-# else:
-#     build_biomass_transport_costs_output = {}
+else:
+    build_biomass_transport_costs_output = {}
 
 
 rule build_salt_cavern_potentials:
